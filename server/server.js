@@ -58,13 +58,18 @@ wss.on('connection', (socket) => {
       const cliente = clientes.get(socket);
 
       if (msg.tipo === 'cambioNombre') {
-        cliente.nombre = msg.nombre;
-        return;
-      }
+
+  cliente.nombre = msg.nombre;
+
+  broadcastUsuarios();
+
+  return;
+
+}
 
       const mensaje = {
         tipo:  'mensaje',
-        autor: cliente.nombre,
+        autor: msg.autor || cliente.nombre,
         texto: msg.texto,
         hora:  new Date().toISOString(),
       };

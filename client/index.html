@@ -12,6 +12,22 @@
       <div>
         <h1>Micelio</h1>
         <p>Chat colaborativo en tiempo real</p>
+        <div class="auth-area">
+
+  <button id="login-google">
+    Iniciar sesión con Google
+  </button>
+
+  <button
+    id="logout-google"
+    style="display:none;"
+  >
+    Cerrar sesión
+  </button>
+
+  <span id="usuario-logueado"></span>
+
+</div>
       </div>
       <span id="estado-conexion" class="estado desconectado">
         Desconectado
@@ -46,6 +62,7 @@
     </div>
   </section>
 
-  <script src="app.js"></script>
+ <script type="module" src="firebase.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

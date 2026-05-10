@@ -8,21 +8,41 @@ const btnEnviar = document.getElementById('btn-enviar');
 const estadoConexion = document.getElementById('estado-conexion');
 
 let socket = null;
-let nombrePropio = null;
+let nombrePropio =
+  localStorage.getItem('usuario') ||
+  `Usuario_${Math.floor(Math.random() * 1000)}`;
 let reconexion = null;
 
 function conectarWebSocket() {
   socket = new WebSocket(WS_URL);
 
   socket.onopen = () => {
-    actualizarEstado(true);
-    mostrarSistema('Conectado al servidor WebSocket.');
 
-    if (reconexion) {
-      clearTimeout(reconexion);
-      reconexion = null;
-    }
-  };
+  actualizarEstado(true);
+
+  mostrarSistema('Conectado al servidor WebSocket.');
+
+  if (nombrePropio) {
+
+    socket.send(JSON.stringify({
+
+      tipo: 'cambioNombre',
+
+      nombre: nombrePropio
+
+    }));
+
+  }
+
+  if (reconexion) {
+
+    clearTimeout(reconexion);
+
+    reconexion = null;
+
+  }
+
+};
 
   socket.onmessage = (evento) => {
     const datos = JSON.parse(evento.data);
@@ -76,11 +96,14 @@ function enviarMensaje() {
   if (!texto || !socket || socket.readyState !== WebSocket.OPEN) {
     return;
   }
-
+nombrePropio =
+  localStorage.getItem('usuario') ||
+  nombrePropio;
   socket.send(JSON.stringify({
-    tipo: 'mensaje',
-    texto: texto
-  }));
+  tipo: 'mensaje',
+  autor: nombrePropio,
+  texto: texto
+}));
 
   inputMensaje.value = '';
   inputMensaje.focus();
@@ -88,7 +111,10 @@ function enviarMensaje() {
 
 function mostrarMensaje(datos) {
   const mensaje = document.createElement('div');
-  const esPropio = datos.autor === nombrePropio;
+  const esPropio =
+  datos.autor?.trim() === nombrePropio?.trim();
+  console.log('AUTOR:', datos.autor);
+console.log('YO:', nombrePropio);
 
   mensaje.className = `mensaje ${esPropio ? 'propio' : 'otro'}`;
 
