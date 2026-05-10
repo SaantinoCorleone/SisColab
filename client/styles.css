@@ -210,3 +210,48 @@ body {
   background: #94a3b8;
   cursor: not-allowed;
 }
+/* LOGIN GOOGLE */
+
+.auth-area {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#login-google,
+#logout-google {
+
+  border: none;
+
+  background: white;
+
+  color: #1e3a8a;
+
+  padding: 8px 14px;
+
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  font-size: 13px;
+
+  font-weight: bold;
+
+}
+
+#login-google:hover,
+#logout-google:hover {
+
+  background: #e0e7ff;
+
+}
+
+#usuario-logueado {
+
+  font-size: 13px;
+
+  color: white;
+
+}
