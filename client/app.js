@@ -27,33 +27,27 @@ function conectarWebSocket() {
   socket.onmessage = (evento) => {
     const datos = JSON.parse(evento.data);
 
-    if (datos.tipo === 'Bienvenid@' || datos.tipo === 'bienvenida') {
-      nombrePropio = datos.texto.replace('Eres ', '');
-      mostrarSistema(datos.texto);
+    if (datos.type === 'welcome') {
+      nombrePropio = datos.payload.replace('Eres ', '');
+      mostrarSistema(datos.payload);
       return;
     }
 
-    if (datos.tipo === 'historial' && Array.isArray(datos.mensajes)) {
-      datos.mensajes.forEach(mostrarMensaje);
-      return;
-    }
-
-    if (datos.tipo === 'mensaje') {
+    if (datos.type === 'chat') {
       mostrarMensaje(datos);
       return;
     }
 
-    if (datos.tipo === 'sistema') {
-      mostrarSistema(datos.texto);
+    if (datos.type === 'join' || datos.type === 'leave') {
+      mostrarSistema(datos.payload);
+      return;
     }
 
-    if (datos.tipo === 'usuarios') {
+    if (datos.type === 'users' && Array.isArray(datos.payload)) {
       const ul = document.getElementById('usuarios');
-      ul.innerHTML = datos.lista
-      .map(n => `<li>${n}</li>`)
-      .join('');
-    return;
-}
+      ul.innerHTML = datos.payload.map(n => `<li>${n}</li>`).join('');
+      return;
+    }
   };
 
   socket.onclose = () => {
@@ -77,10 +71,14 @@ function enviarMensaje() {
     return;
   }
 
-  socket.send(JSON.stringify({
-    tipo: 'mensaje',
-    texto: texto
-  }));
+  const mensaje = {
+    type: 'chat',
+    sender: nombrePropio || 'Usuario_temporal',
+    payload: texto,
+    timestamp: new Date().toISOString()
+  };
+
+  socket.send(JSON.stringify(mensaje));
 
   inputMensaje.value = '';
   inputMensaje.focus();
@@ -88,20 +86,20 @@ function enviarMensaje() {
 
 function mostrarMensaje(datos) {
   const mensaje = document.createElement('div');
-  const esPropio = datos.autor === nombrePropio;
+  const esPropio = datos.sender === nombrePropio;
 
   mensaje.className = `mensaje ${esPropio ? 'propio' : 'otro'}`;
 
-  const hora = datos.hora
-    ? new Date(datos.hora).toLocaleTimeString('es-BO', {
+  const hora = datos.timestamp
+    ? new Date(datos.timestamp).toLocaleTimeString('es-BO', {
         hour: '2-digit',
         minute: '2-digit'
       })
     : '';
 
   mensaje.innerHTML = `
-    ${!esPropio ? `<div class="autor">${datos.autor}</div>` : ''}
-    <div>${datos.texto}</div>
+    ${!esPropio ? `<div class="autor">${datos.sender}</div>` : ''}
+    <div>${datos.payload}</div>
     <div class="hora">${hora}</div>
   `;
 
