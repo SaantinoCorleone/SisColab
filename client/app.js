@@ -46,6 +46,14 @@ function conectarWebSocket() {
     if (datos.tipo === 'sistema') {
       mostrarSistema(datos.texto);
     }
+
+    if (datos.tipo === 'usuarios') {
+      const ul = document.getElementById('usuarios');
+      ul.innerHTML = datos.lista
+      .map(n => `<li>${n}</li>`)
+      .join('');
+    return;
+}
   };
 
   socket.onclose = () => {

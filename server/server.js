@@ -16,15 +16,29 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocket.Server({ server, path: '/ws' });
 
 const clientes = new Map();
-let contadorId = 1; //contador de usuarios
+
+// GENERADOR DE NOMBRES SIN DUPLICADOS
+function generarNombre() {
+  let nombre;
+  const nombresActivos = [...clientes.values()].map(c => c.nombre);
+  do {
+    nombre = `Usuario_${Math.floor(Math.random() * 900) + 100}`;
+  } while (nombresActivos.includes(nombre));
+  return nombre;
+}
+
+// BROADCAST DE LISTA DE USUARIOS CONECTADOS
+function broadcastUsuarios() {
+  const lista = [...clientes.values()].map(c => c.nombre);
+  broadcast({ tipo: 'usuarios', lista });
+}
 
 // NUEVA CONEXIÓN A WEBSOCKET
 wss.on('connection', (socket) => {
-  const nombre = `Usuario_${contadorId++}`;
+  const nombre = generarNombre();
   clientes.set(socket, { nombre });
 
   console.log(`Cliente conectado: ${nombre} — activos: ${clientes.size}`);
-
 
   broadcast({ tipo: 'sistema', texto: `${nombre} se unió al chat` }, socket);
   socket.send(JSON.stringify({ tipo: 'Bienvenid@', texto: `Eres ${nombre}` }));
@@ -57,15 +71,16 @@ wss.on('connection', (socket) => {
     }
   });
 
-  // En caso de: DESCONEXIÓN DEL USUARIO
+  // DESCONEXIÓN DEL USUARIO
   socket.on('close', () => {
     const { nombre } = clientes.get(socket) ?? {};
     clientes.delete(socket);
     console.log(`Usuario desconectado: ${nombre} — activos: ${clientes.size}`);
-    broadcast({ tipo: 'sistema', texto: `${nombre} salió del chat` });
+    broadcast({ tipo: 'sistema', texto: `${nombre} abandonó el chat` });
+    broadcastUsuarios();
   });
 
-  // En caso de: ERROR en el socket
+  // ERROR en el socket
   socket.on('error', (err) => {
     const { nombre } = clientes.get(socket) ?? {};
     console.error(`Error en socket de ${nombre}:`, err.message);
@@ -100,7 +115,7 @@ async function enviarHistorial(socket) {
   }
 }
 
-// EN CASO DE ARRANCAR 
+// ARRANCAR SERVIDOR
 server.listen(PORT, () => {
   console.log(`Servidor en http://localhost:${PORT}`);
   console.log(`WebSocket en ws://localhost:${PORT}/ws`);
