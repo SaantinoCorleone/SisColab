@@ -2,7 +2,7 @@
 const http      = require('http');
 const WebSocket = require('ws');
 require('dotenv').config();
-const { db } = require('./firebase');
+// const { db } = require('./firebase');
 
 const PORT = process.env.PORT || 3000;
 
@@ -42,12 +42,19 @@ wss.on('connection', (socket) => {
 
   broadcast({ tipo: 'sistema', texto: `${nombre} se unió al chat` }, socket);
   socket.send(JSON.stringify({ tipo: 'Bienvenid@', texto: `Eres ${nombre}` }));
-  enviarHistorial(socket);
+  // enviarHistorial(socket);
 
   // RECEPCIÓN DE MENSAJE
   socket.on('message', async (data) => {
     try {
       const msg     = JSON.parse(data);
+      if (
+  !msg.tipo ||
+  !msg.texto
+) {
+  console.log('Mensaje incompleto');
+  return;
+}
       const cliente = clientes.get(socket);
 
       if (msg.tipo === 'cambioNombre') {
@@ -63,7 +70,7 @@ wss.on('connection', (socket) => {
       };
 
       
-      await guardarMensaje(mensaje);
+     // await guardarMensaje(mensaje);
       broadcast(mensaje);
 
     } catch (err) {
@@ -97,7 +104,7 @@ function broadcast(mensaje, excepto = null) {
   });
 }
 // Guarda un mensaje en Firestore
-async function guardarMensaje(mensaje) {
+/* async function guardarMensaje(mensaje) {
   await db.collection('mensajes').add(mensaje);
 }
 
@@ -113,7 +120,7 @@ async function enviarHistorial(socket) {
   } catch (err) {
     console.error('Error cargando historial:', err.message);
   }
-}
+} */
 
 // ARRANCAR SERVIDOR
 server.listen(PORT, () => {
