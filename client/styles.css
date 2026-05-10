@@ -1,0 +1,158 @@
+/* Estilos base del cliente web */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(135deg, #eef2ff, #dbeafe);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chat-container {
+  width: min(920px, 95%);
+  height: 90vh;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-header {
+  background: #1e3a8a;
+  color: white;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-header h1 {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.chat-header p {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.estado {
+  font-size: 13px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: bold;
+}
+
+.estado.conectado {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.estado.desconectado {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.area-mensajes {
+  flex: 1;
+  padding: 18px;
+  background: #f8fafc;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mensaje {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.mensaje.propio {
+  background: #bfdbfe;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.mensaje.otro {
+  background: white;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+.mensaje.sistema {
+  max-width: 90%;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  align-self: center;
+  text-align: center;
+  font-style: italic;
+}
+
+.autor {
+  font-size: 12px;
+  font-weight: bold;
+  color: #1e3a8a;
+  margin-bottom: 4px;
+}
+
+.hora {
+  font-size: 11px;
+  color: #64748b;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.barra-envio {
+  padding: 14px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 10px;
+}
+
+.barra-envio input {
+  flex: 1;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-size: 14px;
+  outline: none;
+}
+
+.barra-envio input:focus {
+  border-color: #1e3a8a;
+}
+
+.barra-envio button {
+  border: none;
+  border-radius: 999px;
+  background: #1e3a8a;
+  color: white;
+  padding: 12px 22px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.barra-envio button:hover {
+  background: #1d4ed8;
+}
+
+.barra-envio button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
