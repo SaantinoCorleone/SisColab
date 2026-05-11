@@ -66,3 +66,35 @@ Desarrollar un sistema de chat colaborativo en tiempo real que permita:
 
 \* \*\*/docs\*\*: Carpeta para documentos y guías del proyecto.
 
+## 🚀 Cómo correr el proyecto
+
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/SaantinoCorleone/SisColab.git
+cd SisColab
+```
+
+### 2. Instalar dependencias
+```bash
+cd server
+npm install
+```
+
+### 3. Configurar variables de entorno
+Copiar el archivo de ejemplo y completar con las credenciales reales:
+```bash
+cp server/.env.example server/.env
+```
+> ⚠️ Las credenciales reales del `.env` deben solicitarse al equipo de desarrollo.
+
+### 4. Correr el servidor
+```bash
+cd server
+node server.js
+```
+
+### 5. Abrir el cliente
+Abrir en el navegador:
+```
+http://localhost:3000
+```
