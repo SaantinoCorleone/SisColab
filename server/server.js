@@ -2,13 +2,25 @@
 const http      = require('http');
 const WebSocket = require('ws');
 require('dotenv').config();
+const { db } = require('./firebase');
 
 const PORT = process.env.PORT || 3000;
 
 // Creamos el servidor HTTP 
+const fs = require('fs');
+const path = require('path');
+
 const server = http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('Servidor de chat activo');
+  let filePath = path.join(__dirname, '../client', req.url === '/' ? 'index.html' : req.url);
+  const ext = path.extname(filePath);
+  const tipos = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css' };
+  const contentType = tipos[ext] || 'text/plain';
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) { res.writeHead(404); res.end('No encontrado'); return; }
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(data);
+  });
 });
 
 // Servidor WebSocket montado sobre el servidor HTTP en la ruta /ws
@@ -43,7 +55,10 @@ wss.on('connection', (socket) => {
   broadcastUsuarios();
 
 
-  socket.send(JSON.stringify({ tipo: 'historial', mensajes: historialMensajes }));
+ db.collection('mensajes').orderBy('hora', 'desc').limit(50).get().then(snapshot => {
+  const mensajes = snapshot.docs.reverse().map(doc => doc.data());
+  socket.send(JSON.stringify({ tipo: 'historial', mensajes }));
+}).catch(err => console.error('Error historial:', err));
 
   socket.on('message', (data) => {
     try {
@@ -71,6 +86,7 @@ wss.on('connection', (socket) => {
       if (historialMensajes.length > 20) historialMensajes.shift();
 
       broadcast(mensaje); 
+      db.collection('mensajes').add(mensaje).catch(err => console.error('Error guardando:', err));
 
     } catch (err) {
       console.error('Error:', err.message);
