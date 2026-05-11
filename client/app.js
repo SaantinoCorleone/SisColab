@@ -57,7 +57,9 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // WebSocket 
-const WS_URL = 'ws://localhost:3000/ws';
+const WS_URL = location.protocol === 'https:'
+  ? `wss://${location.host}/ws?ngrok-skip-browser-warning=true`
+  : `ws://${location.host}/ws`;
 
 const areaMensajes   = document.getElementById('area-mensajes');
 const inputMensaje   = document.getElementById('input-mensaje');
@@ -108,6 +110,7 @@ function conectar() {
     }
 
     if (datos.tipo === 'historial') {
+      areaMensajes.innerHTML = ''; // Limpiar antes de cargar para evitar duplicados
       datos.mensajes.forEach(mostrarMensaje);
       return;
     }
@@ -182,7 +185,7 @@ function mostrarSistema(texto) {
 }
 
 function actualizarEstado(conectado) {
-  estadoConexion.textContent = conectado ? '🟢 Conectado' : '🔴 Desconectado';
+  estadoConexion.textContent = conectado ? 'Conectado' : 'Desconectado';
   estadoConexion.className   = `estado ${conectado ? 'conectado' : 'desconectado'}`;
   btnEnviar.disabled         = !conectado;
 }

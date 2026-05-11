@@ -68,6 +68,8 @@ wss.on('connection', (socket) => {
   console.log(`${nombreTemporal} conectado — sockets activos: ${sockets.size}`);
 
   socket.send(JSON.stringify({ tipo: 'bienvenida', texto: `Eres ${nombreTemporal}` }));
+  // Enviar la lista actual de usuarios al nuevo cliente al conectarse
+  socket.send(JSON.stringify({ tipo: 'usuarios', lista: [...usuarios.keys()] }));
   enviarHistorial(socket);
 
   socket.on('message', async (data) => {
@@ -96,7 +98,9 @@ wss.on('connection', (socket) => {
             usuarios.delete(nombreAnterior);
           }
 
+          // Enviar lista actualizada a TODOS, incluyendo al recién conectado
           broadcastUsuarios();
+          socket.send(JSON.stringify({ tipo: 'usuarios', lista: [...usuarios.keys()] }));
         }
         return;
       }
