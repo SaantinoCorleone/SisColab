@@ -1,71 +1,63 @@
-// IMPORTACIÓN DE DEPENDENCIAS
+// Importamos las dependencias
 const http      = require('http');
 const WebSocket = require('ws');
 require('dotenv').config();
-// const { db } = require('./firebase');
 
 const PORT = process.env.PORT || 3000;
 
-// CREACIÓN DEL SERVIDOR HTTP
+// Creamos el servidor HTTP 
 const server = http.createServer((req, res) => {
   res.writeHead(200);
   res.end('Servidor de chat activo');
 });
 
-// CREACIÓN EN SERVIDOR WEBSOCKET 
+// Servidor WebSocket montado sobre el servidor HTTP en la ruta /ws
 const wss = new WebSocket.Server({ server, path: '/ws' });
+const clientes = new Map(); 
+const historialMensajes = []; 
 
-const clientes = new Map();
 
-// GENERADOR DE NOMBRES SIN DUPLICADOS
 function generarNombre() {
   let nombre;
-  const nombresActivos = [...clientes.values()].map(c => c.nombre);
+  const activos = [...clientes.values()].map(c => c.nombre);
   do {
     nombre = `Usuario_${Math.floor(Math.random() * 900) + 100}`;
-  } while (nombresActivos.includes(nombre));
+  } while (activos.includes(nombre));
   return nombre;
 }
 
-// BROADCAST DE LISTA DE USUARIOS CONECTADOS
+
 function broadcastUsuarios() {
   const lista = [...clientes.values()].map(c => c.nombre);
   broadcast({ tipo: 'usuarios', lista });
 }
 
-// NUEVA CONEXIÓN A WEBSOCKET
 wss.on('connection', (socket) => {
   const nombre = generarNombre();
-  clientes.set(socket, { nombre });
+  clientes.set(socket, { nombre }); 
+  console.log(`🟢 ${nombre} conectado — activos: ${clientes.size}`);
 
-  console.log(`Cliente conectado: ${nombre} — activos: ${clientes.size}`);
 
   broadcast({ tipo: 'sistema', texto: `${nombre} se unió al chat` }, socket);
-  socket.send(JSON.stringify({ tipo: 'Bienvenid@', texto: `Eres ${nombre}` }));
-  // enviarHistorial(socket);
-
-  // RECEPCIÓN DE MENSAJE
-  socket.on('message', async (data) => {
-    try {
-      const msg     = JSON.parse(data);
-      if (
-  !msg.tipo ||
-  !msg.texto
-) {
-  console.log('Mensaje incompleto');
-  return;
-}
-      const cliente = clientes.get(socket);
-
-      if (msg.tipo === 'cambioNombre') {
-
-  cliente.nombre = msg.nombre;
-
+  socket.send(JSON.stringify({ tipo: 'bienvenida', texto: `Eres ${nombre}` }));
   broadcastUsuarios();
 
-  return;
 
-}
+  socket.send(JSON.stringify({ tipo: 'historial', mensajes: historialMensajes }));
+
+  socket.on('message', (data) => {
+    try {
+      const msg = JSON.parse(data);
+      const cliente = clientes.get(socket);
+
+      if (!msg.tipo || !msg.texto) return;
+
+
+      if (msg.tipo === 'cambioNombre') {
+        cliente.nombre = msg.nombre;
+        broadcastUsuarios();
+        return;
+      }
 
       const mensaje = {
         tipo:  'mensaje',
@@ -74,32 +66,33 @@ wss.on('connection', (socket) => {
         hora:  new Date().toISOString(),
       };
 
-      
-     // await guardarMensaje(mensaje);
-      broadcast(mensaje);
+
+      historialMensajes.push(mensaje);
+      if (historialMensajes.length > 20) historialMensajes.shift();
+
+      broadcast(mensaje); 
 
     } catch (err) {
-      console.error('Error procesando el mensaje:', err.message);
+      console.error('Error:', err.message);
     }
   });
 
-  // DESCONEXIÓN DEL USUARIO
+
   socket.on('close', () => {
     const { nombre } = clientes.get(socket) ?? {};
     clientes.delete(socket);
-    console.log(`Usuario desconectado: ${nombre} — activos: ${clientes.size}`);
+    console.log(`🔴 ${nombre} desconectado — activos: ${clientes.size}`);
     broadcast({ tipo: 'sistema', texto: `${nombre} abandonó el chat` });
     broadcastUsuarios();
   });
 
-  // ERROR en el socket
   socket.on('error', (err) => {
     const { nombre } = clientes.get(socket) ?? {};
-    console.error(`Error en socket de ${nombre}:`, err.message);
+    console.error(`Error en ${nombre}:`, err.message);
   });
 });
 
-// FUNCIONES AUXILIARES
+// Función auxiliar 
 function broadcast(mensaje, excepto = null) {
   const datos = JSON.stringify(mensaje);
   clientes.forEach((_, socket) => {
@@ -108,26 +101,7 @@ function broadcast(mensaje, excepto = null) {
     }
   });
 }
-// Guarda un mensaje en Firestore
-/* async function guardarMensaje(mensaje) {
-  await db.collection('mensajes').add(mensaje);
-}
 
-// Envía el historial de los últimos 50 mensajes al cliente
-async function enviarHistorial(socket) {
-  try {
-    const snapshot = await db.collection('mensajes')
-      .orderBy('hora', 'desc')
-      .limit(50)
-      .get();
-    const historial = snapshot.docs.map(doc => doc.data()).reverse();
-    socket.send(JSON.stringify({ tipo: 'historial', mensajes: historial }));
-  } catch (err) {
-    console.error('Error cargando historial:', err.message);
-  }
-} */
-
-// ARRANCAR SERVIDOR
 server.listen(PORT, () => {
   console.log(`Servidor en http://localhost:${PORT}`);
   console.log(`WebSocket en ws://localhost:${PORT}/ws`);

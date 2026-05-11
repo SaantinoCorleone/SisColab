@@ -1,68 +1,48 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Micelio</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Miscelio-chat</title>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <section class="chat-container">
-    <header class="chat-header">
-      <div>
-        <h1>Micelio</h1>
-        <p>Chat colaborativo en tiempo real</p>
-        <div class="auth-area">
+<div class="app">
 
-  <button id="login-google">
-    Iniciar sesión con Google
-  </button>
+  <header class="header">
+    <div class="header-izq">
+      <h1>Micelio</h1>
+      <p>Chat colaborativo en tiempo real</p>
+    </div>
+    <div class="header-der">
+      <span id="usuario-logueado"></span>
+      <button id="login-google">Iniciar sesión con Google</button>
+      <button id="logout-google" style="display:none">Cerrar sesión</button>
+      <span id="estado-conexion" class="estado desconectado">Desconectado</span>
+    </div>
+  </header>
 
-  <button
-    id="logout-google"
-    style="display:none;"
-  >
-    Cerrar sesión
-  </button>
+  <div class="cuerpo">
+    <aside class="sidebar">
+      <h3>Conectados</h3>
+      <ul id="usuarios"></ul>
+    </aside>
 
-  <span id="usuario-logueado"></span>
+    <div class="chat">
+      <main id="area-mensajes" class="area-mensajes"></main>
+      <footer class="barra-envio">
+        <input
+          type="text"
+          id="input-mensaje"
+          placeholder="Escribe un mensaje..."
+          autocomplete="off"
+        />
+        <button id="btn-enviar">Enviar</button>
+      </footer>
+    </div>
+  </div>
 
 </div>
-      </div>
-      <span id="estado-conexion" class="estado desconectado">
-        Desconectado
-      </span>
-    </header>
-
-    <div class="chat-body">
-
-      <aside id="lista-usuarios">
-        <h3>Conectados</h3>
-        <ul id="usuarios"></ul>
-      </aside>
-
-      <div class="chat-main">
-        <main id="area-mensajes" class="area-mensajes">
-          <div class="mensaje sistema">
-            Conectando con el servidor...
-          </div>
-        </main>
-
-        <footer class="barra-envio">
-          <input
-            type="text"
-            id="input-mensaje"
-            placeholder="Escribe un mensaje..."
-            autocomplete="off"
-          />
-          <button id="btn-enviar">Enviar</button>
-        </footer>
-      </div>
-
-    </div>
-  </section>
-
- <script type="module" src="firebase.js"></script>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

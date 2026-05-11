@@ -1,59 +1,106 @@
 // Cliente WebSocket para SisColab Chat
+// Autenticación con Firebase y manejo de mensajes en tiempo real
+import { initializeApp } from
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getAuth, GoogleAuthProvider,
+  signInWithPopup, onAuthStateChanged, signOut
+} from
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
+const firebaseConfig = {
+  apiKey:            "AIzaSyDon4-La4bm7NsAaSdS3jEmdOSAbirJHIk",
+  authDomain:        "nexochat-grupo-eae53.firebaseapp.com",
+  projectId:         "nexochat-grupo-eae53",
+  storageBucket:     "nexochat-grupo-eae53.firebasestorage.app",
+  messagingSenderId: "908829023217",
+  appId:             "1:908829023217:web:73b11ae3cc65619add4250"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth        = getAuth(firebaseApp);
+const provider    = new GoogleAuthProvider();
+
+const btnLogin         = document.getElementById('login-google');
+const btnLogout        = document.getElementById('logout-google');
+const usuarioLogueado  = document.getElementById('usuario-logueado');
+
+// En caso de: Login con Google
+btnLogin.addEventListener('click', async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    localStorage.setItem('usuario', result.user.displayName);
+    location.reload();
+  } catch (e) {
+    console.error('Error login:', e);
+  }
+});
+
+// En caso de: Logout
+btnLogout.addEventListener('click', async () => {
+  await signOut(auth);
+  localStorage.removeItem('usuario');
+  location.reload();
+});
+
+// En caso de: Detectar sesión activa
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    usuarioLogueado.textContent = `👤 ${user.displayName}`;
+    btnLogin.style.display  = 'none';
+    btnLogout.style.display = 'inline-block';
+    localStorage.setItem('usuario', user.displayName);
+  } else {
+    btnLogin.style.display  = 'inline-block';
+    btnLogout.style.display = 'none';
+    usuarioLogueado.textContent = '';
+  }
+});
+
+//Chat WebSocket
 const WS_URL = 'ws://localhost:3000/ws';
 
-const areaMensajes = document.getElementById('area-mensajes');
-const inputMensaje = document.getElementById('input-mensaje');
-const btnEnviar = document.getElementById('btn-enviar');
+const areaMensajes   = document.getElementById('area-mensajes');
+const inputMensaje   = document.getElementById('input-mensaje');
+const btnEnviar      = document.getElementById('btn-enviar');
 const estadoConexion = document.getElementById('estado-conexion');
+const listaUsuarios  = document.getElementById('usuarios');
 
-let socket = null;
+// En caso de no elegir el nombre de Google, si no uno temporal
 let nombrePropio =
   localStorage.getItem('usuario') ||
-  `Usuario_${Math.floor(Math.random() * 1000)}`;
+  `Usuario_${Math.floor(Math.random() * 900) + 100}`;
+
+let socket    = null;
 let reconexion = null;
 
-function conectarWebSocket() {
+function conectar() {
   socket = new WebSocket(WS_URL);
 
   socket.onopen = () => {
-
-  actualizarEstado(true);
-
-  mostrarSistema('Conectado al servidor WebSocket.');
-
-  if (nombrePropio) {
-
+    actualizarEstado(true);
+    mostrarSistema('Conectado al servidor.');
+    // Enviar nombre real al servidor
     socket.send(JSON.stringify({
-
-      tipo: 'cambioNombre',
-
-      nombre: nombrePropio
-
+      tipo:   'cambioNombre',
+      nombre: localStorage.getItem('usuario') || nombrePropio,
+      texto:  '-'   // campo requerido por validación del servidor
     }));
-
-  }
-
-  if (reconexion) {
-
-    clearTimeout(reconexion);
-
-    reconexion = null;
-
-  }
-
-};
+    if (reconexion) { clearTimeout(reconexion); reconexion = null; }
+  };
 
   socket.onmessage = (evento) => {
     const datos = JSON.parse(evento.data);
 
-    if (datos.tipo === 'Bienvenid@' || datos.tipo === 'bienvenida') {
-      nombrePropio = datos.texto.replace('Eres ', '');
-      mostrarSistema(datos.texto);
+    if (datos.tipo === 'bienvenida') {
+      // Solo usamos el nombre del servidor si no hay sesión de Google
+      if (!localStorage.getItem('usuario')) {
+        nombrePropio = datos.texto.replace('Eres ', '');
+      }
       return;
     }
 
-    if (datos.tipo === 'historial' && Array.isArray(datos.mensajes)) {
+    if (datos.tipo === 'historial') {
       datos.mensajes.forEach(mostrarMensaje);
       return;
     }
@@ -65,91 +112,74 @@ function conectarWebSocket() {
 
     if (datos.tipo === 'sistema') {
       mostrarSistema(datos.texto);
+      return;
     }
 
     if (datos.tipo === 'usuarios') {
-      const ul = document.getElementById('usuarios');
-      ul.innerHTML = datos.lista
-      .map(n => `<li>${n}</li>`)
-      .join('');
-    return;
-}
+      listaUsuarios.innerHTML = datos.lista
+        .map(n => `<li>${n}</li>`)
+        .join('');
+    }
   };
 
   socket.onclose = () => {
     actualizarEstado(false);
-    mostrarSistema('Conexión cerrada. Intentando reconectar...');
-
-    reconexion = setTimeout(() => {
-      conectarWebSocket();
-    }, 3000);
+    mostrarSistema('Desconectado. Reconectando en 3s...');
+    reconexion = setTimeout(conectar, 3000);
   };
 
   socket.onerror = () => {
-    mostrarSistema('Ocurrió un error con la conexión WebSocket.');
+    mostrarSistema('Error en la conexión WebSocket.');
   };
 }
 
 function enviarMensaje() {
   const texto = inputMensaje.value.trim();
+  if (!texto || !socket || socket.readyState !== WebSocket.OPEN) return;
 
-  if (!texto || !socket || socket.readyState !== WebSocket.OPEN) {
-    return;
-  }
-nombrePropio =
-  localStorage.getItem('usuario') ||
-  nombrePropio;
-  socket.send(JSON.stringify({
-  tipo: 'mensaje',
-  autor: nombrePropio,
-  texto: texto
-}));
+  // Usar nombre actualizado del localStorage o el temporal
+  const autor = localStorage.getItem('usuario') || nombrePropio;
 
+  socket.send(JSON.stringify({ tipo: 'mensaje', autor, texto }));
   inputMensaje.value = '';
   inputMensaje.focus();
 }
 
 function mostrarMensaje(datos) {
-  const mensaje = document.createElement('div');
-  const esPropio =
-  datos.autor?.trim() === nombrePropio?.trim();
-  console.log('AUTOR:', datos.autor);
-console.log('YO:', nombrePropio);
+  const autor   = localStorage.getItem('usuario') || nombrePropio;
+  const esPropio = datos.autor?.trim() === autor?.trim();
 
-  mensaje.className = `mensaje ${esPropio ? 'propio' : 'otro'}`;
+  const burbuja = document.createElement('div');
+  burbuja.className = `mensaje ${esPropio ? 'propio' : 'otro'}`;
 
   const hora = datos.hora
     ? new Date(datos.hora).toLocaleTimeString('es-BO', {
-        hour: '2-digit',
-        minute: '2-digit'
+        hour: '2-digit', minute: '2-digit'
       })
     : '';
 
-  mensaje.innerHTML = `
+  burbuja.innerHTML = `
     ${!esPropio ? `<div class="autor">${datos.autor}</div>` : ''}
     <div>${datos.texto}</div>
     <div class="hora">${hora}</div>
   `;
 
-  areaMensajes.appendChild(mensaje);
+  areaMensajes.appendChild(burbuja);
   bajarScroll();
 }
 
 function mostrarSistema(texto) {
   const aviso = document.createElement('div');
-  aviso.className = 'mensaje sistema';
+  aviso.className   = 'mensaje sistema';
   aviso.textContent = texto;
   areaMensajes.appendChild(aviso);
   bajarScroll();
 }
 
 function actualizarEstado(conectado) {
-  estadoConexion.textContent = conectado ? 'Conectado' : 'Desconectado';
-  estadoConexion.className = conectado
-    ? 'estado conectado'
-    : 'estado desconectado';
-
-  btnEnviar.disabled = !conectado;
+  estadoConexion.textContent = conectado ? '🟢 Conectado' : '🔴 Desconectado';
+  estadoConexion.className   = `estado ${conectado ? 'conectado' : 'desconectado'}`;
+  btnEnviar.disabled         = !conectado;
 }
 
 function bajarScroll() {
@@ -157,12 +187,9 @@ function bajarScroll() {
 }
 
 btnEnviar.addEventListener('click', enviarMensaje);
-
-inputMensaje.addEventListener('keydown', (evento) => {
-  if (evento.key === 'Enter') {
-    enviarMensaje();
-  }
+inputMensaje.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') enviarMensaje();
 });
 
 btnEnviar.disabled = true;
-conectarWebSocket();
+conectar();

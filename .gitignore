@@ -142,3 +142,11 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 *.json
+
+
+node_modules/
+.env
+*.json
+package-lock.json
+.DS_Store
+Thumbs.db
