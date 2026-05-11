@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Miscelio-chat</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <div class="header-izq">
+      <h1>Micelio</h1>
+      <p>Chat colaborativo en tiempo real</p>
+    </div>
+    <div class="header-der">
+      <span id="usuario-logueado"></span>
+      <button id="login-google">Iniciar sesión con Google</button>
+      <button id="logout-google" style="display:none">Cerrar sesión</button>
+      <span id="estado-conexion" class="estado desconectado">Desconectado</span>
+    </div>
+  </header>
+
+  <div class="cuerpo">
+    <aside class="sidebar">
+      <h3>Conectados</h3>
+      <ul id="usuarios"></ul>
+    </aside>
+
+    <div class="chat">
+      <main id="area-mensajes" class="area-mensajes"></main>
+      <footer class="barra-envio">
+        <input
+          type="text"
+          id="input-mensaje"
+          placeholder="Escribe un mensaje..."
+          autocomplete="off"
+        />
+        <button id="btn-enviar">Enviar</button>
+      </footer>
+    </div>
+  </div>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
