@@ -56,7 +56,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Websocket para chat
+// WebSocket 
 const WS_URL = 'ws://localhost:3000/ws';
 
 const areaMensajes   = document.getElementById('area-mensajes');
@@ -65,10 +65,9 @@ const btnEnviar      = document.getElementById('btn-enviar');
 const estadoConexion = document.getElementById('estado-conexion');
 const listaUsuarios  = document.getElementById('usuarios');
 
-// Nombre: Google si hay sesión, si no uno temporal
-let nombrePropio =
-  localStorage.getItem('usuario') ||
-  `Usuario_${Math.floor(Math.random() * 900) + 100}`;
+
+// Si hay sesión Google se usa ese nombre; si no, se espera al servidor.
+let nombrePropio = localStorage.getItem('usuario') || null;
 
 let socket     = null;
 let reconexion = null;
@@ -80,11 +79,15 @@ function conectar() {
     actualizarEstado(true);
     mostrarSistema('Conectado al servidor.');
 
-    // Enviar nombre real al servidor (sin campo texto)
-    socket.send(JSON.stringify({
-      tipo:   'cambioNombre',
-      nombre: localStorage.getItem('usuario') || nombrePropio
-    }));
+    // Si hay sesión Google, enviar el nombre real de inmediato.
+    // Si no hay Google, esperar la 'bienvenida' del servidor 
+    const nombreGoogle = localStorage.getItem('usuario');
+    if (nombreGoogle) {
+      socket.send(JSON.stringify({
+        tipo:   'cambioNombre',
+        nombre: nombreGoogle
+      }));
+    }
 
     if (reconexion) { clearTimeout(reconexion); reconexion = null; }
   };
@@ -93,9 +96,13 @@ function conectar() {
     const datos = JSON.parse(evento.data);
 
     if (datos.tipo === 'bienvenida') {
-      // Solo usar nombre del servidor si no hay sesión Google
+      // Si no hay Google, usar el nombre asignado por el servidor
       if (!localStorage.getItem('usuario')) {
         nombrePropio = datos.texto.replace('Eres ', '');
+        socket.send(JSON.stringify({
+          tipo:   'cambioNombre',
+          nombre: nombrePropio
+        }));
       }
       return;
     }
@@ -124,6 +131,7 @@ function conectar() {
 
   socket.onclose = () => {
     actualizarEstado(false);
+    socket = null;
     mostrarSistema('Desconectado. Reconectando en 3s...');
     reconexion = setTimeout(conectar, 3000);
   };
@@ -136,15 +144,13 @@ function conectar() {
 function enviarMensaje() {
   const texto = inputMensaje.value.trim();
   if (!texto || !socket || socket.readyState !== WebSocket.OPEN) return;
-
-  const autor = localStorage.getItem('usuario') || nombrePropio;
-
-  socket.send(JSON.stringify({ tipo: 'mensaje', autor, texto }));
+  socket.send(JSON.stringify({ tipo: 'mensaje', texto }));
   inputMensaje.value = '';
   inputMensaje.focus();
 }
 
 function mostrarMensaje(datos) {
+  // Comparar con el nombre actual para saber si el mensaje es propio
   const autor    = localStorage.getItem('usuario') || nombrePropio;
   const esPropio = datos.autor?.trim() === autor?.trim();
 

@@ -1,4 +1,3 @@
-// Importamos las dependencias
 const http      = require('http');
 const WebSocket = require('ws');
 const fs        = require('fs');
@@ -8,7 +7,7 @@ const { db } = require('./firebase');
 
 const PORT = process.env.PORT || 3000;
 
-// Servidor HTTP que sirve los archivos del /client
+//Servidor HTTP
 const server = http.createServer((req, res) => {
   const filePath = path.join(__dirname, '../client',
     req.url === '/' ? 'index.html' : req.url);
@@ -26,27 +25,26 @@ const server = http.createServer((req, res) => {
   });
 });
 
-// Servidor WebSocket en /ws
-const wss      = new WebSocket.Server({ server, path: '/ws' });
-const clientes = new Map();
+const wss = new WebSocket.Server({ server, path: '/ws' });
 
-// Genera nombre único sin duplicados
+const sockets  = new Map();
+const usuarios = new Map();
+
+// Genera un nombre temporal único que no esté en uso
 function generarNombre() {
   let nombre;
-  const activos = [...clientes.values()].map(c => c.nombre);
   do {
     nombre = `Usuario_${Math.floor(Math.random() * 900) + 100}`;
-  } while (activos.includes(nombre));
+  } while (usuarios.has(nombre));
   return nombre;
 }
 
-// Avisa a todos quiénes están conectados
+// Envía la lista de usuarios únicos a todos los clientes
 function broadcastUsuarios() {
-  const lista = [...clientes.values()].map(c => c.nombre);
-  broadcast({ tipo: 'usuarios', lista });
+  broadcast({ tipo: 'usuarios', lista: [...usuarios.keys()] });
 }
 
-// Envía los últimos 20 mensajes de Firestore al cliente nuevo
+// Carga los últimos 20 mensajes de Firestore y los envía al socket
 async function enviarHistorial(socket) {
   try {
     const snapshot = await db.collection('mensajes')
@@ -55,50 +53,64 @@ async function enviarHistorial(socket) {
       .get();
     const mensajes = snapshot.docs.map(doc => doc.data());
     socket.send(JSON.stringify({ tipo: 'historial', mensajes }));
-    console.log(`📜 Historial enviado: ${mensajes.length} mensajes`);
+    console.log(`Historial enviado: ${mensajes.length} mensajes`);
   } catch (err) {
     console.error('Error cargando historial:', err.message);
   }
 }
 
-// Nueva conexión WebSocket
+// Conexión del WebSocket y manejo de eventos
 wss.on('connection', (socket) => {
-  const nombre = generarNombre();
-  clientes.set(socket, { nombre });
-  console.log(`🟢 ${nombre} conectado — activos: ${clientes.size}`);
+  const nombreTemporal = generarNombre();
 
-  broadcast({ tipo: 'sistema', texto: `${nombre} se unió al chat` }, socket);
-  socket.send(JSON.stringify({ tipo: 'bienvenida', texto: `Eres ${nombre}` }));
-  broadcastUsuarios();
+  // Registra el socket con nombre temporal hasta que el cliente confirme
+  sockets.set(socket, { nombre: nombreTemporal, confirmado: false });
+  console.log(`${nombreTemporal} conectado — sockets activos: ${sockets.size}`);
+
+  socket.send(JSON.stringify({ tipo: 'bienvenida', texto: `Eres ${nombreTemporal}` }));
   enviarHistorial(socket);
 
-  // Mensaje recibido 
   socket.on('message', async (data) => {
     try {
-      const msg     = JSON.parse(data);
-      const cliente = clientes.get(socket);
-
+      const msg  = JSON.parse(data);
+      const info = sockets.get(socket);
 
       if (msg.tipo === 'cambioNombre' && msg.nombre) {
-        cliente.nombre = msg.nombre;
-        broadcastUsuarios();
+        const nombreAnterior = info.nombre;
+        const nombreNuevo    = msg.nombre;
+
+        if (!info.confirmado) {
+          info.confirmado = true;
+          info.nombre     = nombreNuevo;
+
+          if (!usuarios.has(nombreNuevo)) {
+            // Registra a un usuario y anunciar unión
+            usuarios.set(nombreNuevo, new Set([socket]));
+            broadcast({ tipo: 'sistema', texto: `${nombreNuevo} se unió al chat` }, socket);
+          } else {
+            usuarios.get(nombreNuevo).add(socket);
+          }
+
+          // Limpia el nombre temporal del mapa si quedó registrado con google
+          if (usuarios.has(nombreAnterior) && nombreAnterior !== nombreNuevo) {
+            usuarios.delete(nombreAnterior);
+          }
+
+          broadcastUsuarios();
+        }
         return;
       }
-
 
       if (msg.tipo !== 'mensaje' || !msg.texto) return;
 
       const mensaje = {
         tipo:  'mensaje',
-        autor: msg.autor || cliente.nombre,
+        autor: info.nombre,
         texto: msg.texto,
         hora:  new Date().toISOString(),
       };
 
-
       broadcast(mensaje);
-
-
       db.collection('mensajes').add(mensaje)
         .catch(err => console.error('Error guardando:', err.message));
 
@@ -107,26 +119,39 @@ wss.on('connection', (socket) => {
     }
   });
 
-  // En caso de: desconexión
   socket.on('close', () => {
-    const { nombre } = clientes.get(socket) ?? {};
-    clientes.delete(socket);
-    console.log(`🔴 ${nombre} desconectado — activos: ${clientes.size}`);
-    broadcast({ tipo: 'sistema', texto: `${nombre} abandonó el chat` });
-    broadcastUsuarios();
+    const info = sockets.get(socket);
+    if (!info) return;
+
+    const { nombre, confirmado } = info;
+    sockets.delete(socket);
+
+    if (confirmado && usuarios.has(nombre)) {
+      const socketsDelUsuario = usuarios.get(nombre);
+      socketsDelUsuario.delete(socket);
+
+      if (socketsDelUsuario.size === 0) {
+        // Por si el usuario cierra pestaña y se sale del chat
+        usuarios.delete(nombre);
+        console.log(`${nombre} salió — usuarios activos: ${usuarios.size}`);
+        broadcast({ tipo: 'sistema', texto: `${nombre} abandonó el chat` });
+        broadcastUsuarios();
+      } else {
+        //Por si tiene otras pestañas abiertas no anuncia salida
+        console.log(`${nombre} cerró una pestaña — le quedan ${socketsDelUsuario.size}`);
+      }
+    }
   });
 
-  // En caso de: error de socket
   socket.on('error', (err) => {
-    const { nombre } = clientes.get(socket) ?? {};
-    console.error(`Error en ${nombre}:`, err.message);
+    const info = sockets.get(socket);
+    console.error(`Error en ${info?.nombre}:`, err.message);
   });
 });
 
-// Envía a todas las personas conectadas 
 function broadcast(mensaje, excepto = null) {
   const datos = JSON.stringify(mensaje);
-  clientes.forEach((_, socket) => {
+  sockets.forEach((_, socket) => {
     if (socket !== excepto && socket.readyState === WebSocket.OPEN) {
       socket.send(datos);
     }
