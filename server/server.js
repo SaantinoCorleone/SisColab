@@ -78,7 +78,7 @@ wss.on('connection', (socket) => {
         tipo:  'mensaje',
         autor: msg.autor || cliente.nombre,
         texto: msg.texto,
-        hora:  new Date().toISOString(),
+        hora: new Date().toLocaleString('es-BO', { timeZone: 'America/La_Paz' })
       };
 
 
