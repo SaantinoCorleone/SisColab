@@ -1,5 +1,4 @@
-// Cliente WebSocket para SisColab Chat
-// Autenticación con Firebase y manejo de mensajes en tiempo real
+// Autenticación con Firebase Google
 import { initializeApp } from
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
@@ -21,11 +20,11 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
 const provider    = new GoogleAuthProvider();
 
-const btnLogin         = document.getElementById('login-google');
-const btnLogout        = document.getElementById('logout-google');
-const usuarioLogueado  = document.getElementById('usuario-logueado');
+const btnLogin        = document.getElementById('login-google');
+const btnLogout       = document.getElementById('logout-google');
+const usuarioLogueado = document.getElementById('usuario-logueado');
 
-// En caso de: Login con Google
+// Login con Google
 btnLogin.addEventListener('click', async () => {
   try {
     const result = await signInWithPopup(auth, provider);
@@ -36,28 +35,28 @@ btnLogin.addEventListener('click', async () => {
   }
 });
 
-// En caso de: Logout
+// Logout
 btnLogout.addEventListener('click', async () => {
   await signOut(auth);
   localStorage.removeItem('usuario');
   location.reload();
 });
 
-// En caso de: Detectar sesión activa
+// Detectar sesión activa al cargar
 onAuthStateChanged(auth, (user) => {
   if (user) {
     usuarioLogueado.textContent = `👤 ${user.displayName}`;
-    btnLogin.style.display  = 'none';
-    btnLogout.style.display = 'inline-block';
+    btnLogin.style.display      = 'none';
+    btnLogout.style.display     = 'inline-block';
     localStorage.setItem('usuario', user.displayName);
   } else {
-    btnLogin.style.display  = 'inline-block';
-    btnLogout.style.display = 'none';
+    btnLogin.style.display      = 'inline-block';
+    btnLogout.style.display     = 'none';
     usuarioLogueado.textContent = '';
   }
 });
 
-//Chat WebSocket
+// Websocket para chat
 const WS_URL = 'ws://localhost:3000/ws';
 
 const areaMensajes   = document.getElementById('area-mensajes');
@@ -66,12 +65,12 @@ const btnEnviar      = document.getElementById('btn-enviar');
 const estadoConexion = document.getElementById('estado-conexion');
 const listaUsuarios  = document.getElementById('usuarios');
 
-// En caso de no elegir el nombre de Google, si no uno temporal
+// Nombre: Google si hay sesión, si no uno temporal
 let nombrePropio =
   localStorage.getItem('usuario') ||
   `Usuario_${Math.floor(Math.random() * 900) + 100}`;
 
-let socket    = null;
+let socket     = null;
 let reconexion = null;
 
 function conectar() {
@@ -80,12 +79,13 @@ function conectar() {
   socket.onopen = () => {
     actualizarEstado(true);
     mostrarSistema('Conectado al servidor.');
-    // Enviar nombre real al servidor
+
+    // Enviar nombre real al servidor (sin campo texto)
     socket.send(JSON.stringify({
       tipo:   'cambioNombre',
-      nombre: localStorage.getItem('usuario') || nombrePropio,
-      texto:  '-'   // campo requerido por validación del servidor
+      nombre: localStorage.getItem('usuario') || nombrePropio
     }));
+
     if (reconexion) { clearTimeout(reconexion); reconexion = null; }
   };
 
@@ -93,7 +93,7 @@ function conectar() {
     const datos = JSON.parse(evento.data);
 
     if (datos.tipo === 'bienvenida') {
-      // Solo usamos el nombre del servidor si no hay sesión de Google
+      // Solo usar nombre del servidor si no hay sesión Google
       if (!localStorage.getItem('usuario')) {
         nombrePropio = datos.texto.replace('Eres ', '');
       }
@@ -137,7 +137,6 @@ function enviarMensaje() {
   const texto = inputMensaje.value.trim();
   if (!texto || !socket || socket.readyState !== WebSocket.OPEN) return;
 
-  // Usar nombre actualizado del localStorage o el temporal
   const autor = localStorage.getItem('usuario') || nombrePropio;
 
   socket.send(JSON.stringify({ tipo: 'mensaje', autor, texto }));
@@ -146,7 +145,7 @@ function enviarMensaje() {
 }
 
 function mostrarMensaje(datos) {
-  const autor   = localStorage.getItem('usuario') || nombrePropio;
+  const autor    = localStorage.getItem('usuario') || nombrePropio;
   const esPropio = datos.autor?.trim() === autor?.trim();
 
   const burbuja = document.createElement('div');
