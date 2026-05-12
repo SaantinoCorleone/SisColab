@@ -185,7 +185,7 @@ micelio/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/tu-equipo/micelio-chat.git
+git clone https://github.com/SaantinoCorleone/micelio-chat.git
 cd micelio-chat
 ```
 
