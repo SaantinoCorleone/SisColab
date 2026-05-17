@@ -58,7 +58,7 @@ onAuthStateChanged(auth, (user) => {
 
 // WebSocket 
 const WS_URL = location.protocol === 'https:'
-  ? `wss://${location.host}/ws?ngrok-skip-browser-warning=true`
+  ? `wss://${location.host}/ws`
   : `ws://${location.host}/ws`;
 
 const areaMensajes   = document.getElementById('area-mensajes');
